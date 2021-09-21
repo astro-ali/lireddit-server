@@ -1,0 +1,1 @@
+# A GraphQL API for lireddit Web app
