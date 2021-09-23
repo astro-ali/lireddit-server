@@ -7,9 +7,10 @@ import {
   InputType,
   Mutation,
   ObjectType,
+  Query,
   Resolver,
 } from "type-graphql";
-const bcrypt = require("bcryptjs");
+import bcrypt from "bcryptjs";
 
 @InputType()
 class UsernamePasswordInput {
@@ -39,6 +40,25 @@ class UserResponse {
 
 @Resolver()
 export class UserResolver {
+
+    @Query(() => User, {nullable: true})
+    async me(
+        @Ctx() { req, em }: MyContext
+    ){
+        let id: any = req.session.userId;
+        if(!req.session.userId){
+            console.log("user id is null");
+            return null;
+        }
+        
+        const user = await em.findOne(User, {id: id});
+
+        if(!user) return null;
+
+        return user;
+    }
+
+
   /**
    * register resolver
    * @param options
@@ -50,39 +70,38 @@ export class UserResolver {
     @Arg("options") options: UsernamePasswordInput,
     @Ctx() { em }: MyContext
   ): Promise<UserResponse> {
-
-    if(options.username.length === 0){
-        return {
-            errors:[
-                {
-                    field: "username",
-                    message: "username field is empty"
-                }
-            ]
-        }
+    if (options.username.length === 0) {
+      return {
+        errors: [
+          {
+            field: "username",
+            message: "username field is empty",
+          },
+        ],
+      };
     }
 
-    if(options.password.length <= 3){
-        return {
-            errors:[
-                {
-                    field: "password",
-                    message: "length must be greater than 3"
-                }
-            ]
-        }
+    if (options.password.length <= 3) {
+      return {
+        errors: [
+          {
+            field: "password",
+            message: "length must be greater than 3",
+          },
+        ],
+      };
     }
 
     let oldUser = await em.findOne(User, { username: options.username });
-    if(oldUser){
-        return {
-            errors: [
-                {
-                    field: "username",
-                    message: "username already taken",
-                }
-            ]
-        }
+    if (oldUser) {
+      return {
+        errors: [
+          {
+            field: "username",
+            message: "username already taken",
+          },
+        ],
+      };
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -94,9 +113,10 @@ export class UserResolver {
     await em.persistAndFlush(user);
 
     return {
-        user
+      user,
     };
   }
+
 
   /**
    * login resolver
@@ -107,7 +127,7 @@ export class UserResolver {
   @Mutation(() => UserResponse)
   async login(
     @Arg("options") options: UsernamePasswordInput,
-    @Ctx() { em }: MyContext
+    @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
     let user: any = await em.findOne(User, { username: options.username });
     if (!user) {
@@ -131,8 +151,9 @@ export class UserResolver {
         ],
       };
     }
-    return {
-      user,
-    };
+
+    req.session.userId = user.id;
+
+    return { user };
   }
 }
