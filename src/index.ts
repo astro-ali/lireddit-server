@@ -7,6 +7,10 @@ import { ApolloServer } from 'apollo-server-express';
 import { buildSchema } from 'type-graphql';
 import { HelloResolver } from "./resolvers/hello";
 import { PostResolver } from "./resolvers/post";
+import { UserResolver } from "./resolvers/user";
+require('dotenv').config();
+
+const port = process.env.PORT || 5000
 
 const main = async () => {
   // connect to db
@@ -16,7 +20,7 @@ const main = async () => {
   const app = express();
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
-        resolvers: [HelloResolver, PostResolver],
+        resolvers: [HelloResolver, PostResolver, UserResolver],
         validate: false,
     }),
     context: () => ({ em: orm.em })
@@ -25,8 +29,8 @@ const main = async () => {
     await apolloServer.start();
     apolloServer.applyMiddleware({ app });
   
-  app.listen(5000, () => {
-      console.log(`Running on localhost:5000`);
+  app.listen(port, () => {
+      console.log(`Running on localhost:${port}`);
   });
 };
 
